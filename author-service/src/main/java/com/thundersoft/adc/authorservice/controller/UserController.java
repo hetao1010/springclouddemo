@@ -16,7 +16,7 @@ public class UserController {
     @Value("${spring.application.name}")
     private String serverName;
 
-    @ApiOperation(value = "展示报警信息数据列表")
+    @ApiOperation(value = "获取服务名")
     @RequestMapping(value = "/getServerName", method = RequestMethod.GET)
     public String getServerName(){
          return "welcome to " + serverName;
