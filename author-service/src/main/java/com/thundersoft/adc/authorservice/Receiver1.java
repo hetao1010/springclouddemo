@@ -20,8 +20,8 @@ import java.util.concurrent.TimeUnit;
  * Created by hetao on 2019/4/1.
  */
 
-@RabbitListener(containerFactory = "rabbitListenerContainer", queues = AmqpConfig.QUEUE_NAME)
-public class Receiver implements ChannelAwareMessageListener {
+@RabbitListener(containerFactory = "rabbitListenerContainer", queues = AmqpConfig.QUEUE_NAME_FAN)
+public class Receiver1 implements ChannelAwareMessageListener {
     public Logger logger = LoggerFactory.getLogger(this.getClass());
 
 

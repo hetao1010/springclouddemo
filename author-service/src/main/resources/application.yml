@@ -9,10 +9,10 @@ spring:
   application:
     name: author-service
   rabbitmq:
-    host: 47.112.204.23
+    host: 192.168.253.4
     port: 5672
-    password: guest
-    username: guest
+    password: admin
+    username: admin
     virtual-host: /
     listener:
       auto-startup: true

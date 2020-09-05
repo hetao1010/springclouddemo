@@ -30,7 +30,7 @@ public class TestController {
                             "\",\"userId\":\"hetao" + i +
                             "\",\"userName\":\"何涛" + i+
                             "\",\"age\":26\r\n}").getBytes()).setMessageId("123"+i).build();
-            rabbitTemplate.convertAndSend(AmqpConfig.EXCHANGE, AmqpConfig.ROUTINGKEY, message);
+            rabbitTemplate.convertAndSend(AmqpConfig.EXCHANGE_FANOUT,"", message);
         }
         return "ok";
     }

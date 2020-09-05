@@ -1,10 +1,7 @@
 package com.thundersoft.adc.trainserver;
 
 
-import org.springframework.amqp.core.Binding;
-import org.springframework.amqp.core.BindingBuilder;
-import org.springframework.amqp.core.DirectExchange;
-import org.springframework.amqp.core.Queue;
+import org.springframework.amqp.core.*;
 import org.springframework.amqp.rabbit.annotation.EnableRabbit;
 import org.springframework.amqp.rabbit.connection.CachingConnectionFactory;
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
@@ -21,10 +18,12 @@ import org.springframework.context.annotation.Scope;
 @Configuration
 public class AmqpConfig {
     public static final String EXCHANGE = "spring.boot.direct";
+    public static final String EXCHANGE_FANOUT = "spring.boot.fanout";
     public static final String ROUTINGKEY_FAIL = "spring.boot.routingKey.failure";
     public static final String ROUTINGKEY = "spring.boot.routingKey";
     public static final String QUEUE_NAME = "spring.thundersoft";
     public static final String QUEUE_NAME_FAIL = "spring.thundersoft.failure";
+    public static final String QUEUE_NAME_FAN = "spring.thundersoft.fan";
 
     //RabbitMQ的配置信息
     @Value("${spring.rabbitmq.host}")
@@ -64,6 +63,17 @@ public class AmqpConfig {
         return template;
     }
 
+    @Bean
+    public FanoutExchange fanoutExchange() {
+        return new FanoutExchange(EXCHANGE_FANOUT);
+    }
+
+    @Bean
+    public Queue queueFan() {
+        return new Queue(QUEUE_NAME_FAN, true); //队列持久
+
+    }
+
     /**
      * 交换机
      * 针对消费者配置
@@ -99,13 +109,23 @@ public class AmqpConfig {
      *
      * @return
      */
-    @Bean
-    public Binding binding(Queue queue, DirectExchange exchange) {
-        return BindingBuilder.bind(queue()).to(exchange()).with(AmqpConfig.ROUTINGKEY);
-    }
+//    @Bean
+//    public Binding binding(Queue queue, DirectExchange exchange) {
+//        return BindingBuilder.bind(queue()).to(exchange()).with(AmqpConfig.ROUTINGKEY);
+//    }
     @Bean
     public Binding bindingFail(Queue queue, DirectExchange exchange) {
         return BindingBuilder.bind(queueFail()).to(exchange()).with(AmqpConfig.ROUTINGKEY_FAIL);
+    }
+
+    @Bean
+    public Binding bindingFan(Queue queue, FanoutExchange exchange) {
+        return BindingBuilder.bind(queueFan()).to(fanoutExchange());
+    }
+
+    @Bean
+    public Binding binding(Queue queue, FanoutExchange exchange) {
+        return BindingBuilder.bind(queue()).to(fanoutExchange());
     }
 
 

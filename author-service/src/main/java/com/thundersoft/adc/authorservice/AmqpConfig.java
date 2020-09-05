@@ -3,6 +3,7 @@ package com.thundersoft.adc.authorservice;
 
 import org.springframework.amqp.core.*;
 import org.springframework.amqp.rabbit.annotation.EnableRabbit;
+import org.springframework.amqp.rabbit.config.SimpleRabbitListenerContainerFactory;
 import org.springframework.amqp.rabbit.connection.CachingConnectionFactory;
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
@@ -21,10 +22,12 @@ import org.springframework.web.filter.CharacterEncodingFilter;
 @Configuration
 public class AmqpConfig {
     public static final String EXCHANGE = "spring.boot.direct";
+    public static final String EXCHANGE_FANOUT = "spring.boot.fanout";
     public static final String ROUTINGKEY_FAIL = "spring.boot.routingKey.failure";
     public static final String ROUTINGKEY = "spring.boot.routingKey";
     public static final String QUEUE_NAME = "spring.thundersoft";
     public static final String QUEUE_NAME_FAIL = "spring.thundersoft.failure";
+    public static final String QUEUE_NAME_FAN = "spring.thundersoft.fan";
 
     //RabbitMQ的配置信息
     @Value("${spring.rabbitmq.host}")
@@ -77,6 +80,19 @@ public class AmqpConfig {
     }
 
     /**
+     * 交换机
+     * 针对消费者配置
+     * FanoutExchange: 将消息分发到所有的绑定队列，无routingkey的概念
+     * HeadersExchange ：通过添加属性key-value匹配
+     * DirectExchange:按照routingkey分发到指定队列
+     * TopicExchange:多关键字匹配
+     */
+    @Bean
+    public FanoutExchange fanoutExchange() {
+        return new FanoutExchange(EXCHANGE_FANOUT);
+    }
+
+    /**
      * 队列
      *
      * @return
@@ -92,20 +108,37 @@ public class AmqpConfig {
         return new Queue(QUEUE_NAME_FAIL, true); //队列持久
 
     }
+
+    @Bean
+    public Queue queueFan() {
+        return new Queue(QUEUE_NAME_FAN, true); //队列持久
+
+    }
     /**
      * 绑定
      *
      * @return
      */
-    @Bean
-    public Binding binding(Queue queue, DirectExchange exchange) {
-        return BindingBuilder.bind(queue()).to(exchange()).with(AmqpConfig.ROUTINGKEY);
-    }
+//    @Bean
+//    public Binding binding(Queue queue, DirectExchange exchange) {
+//        return BindingBuilder.bind(queue()).to(exchange()).with(AmqpConfig.ROUTINGKEY);
+//    }
 
     @Bean
     public Binding bindingFail(Queue queue, DirectExchange exchange) {
         return BindingBuilder.bind(queueFail()).to(exchange()).with(AmqpConfig.ROUTINGKEY_FAIL);
     }
+
+    @Bean
+    public Binding bindingFan(Queue queue, FanoutExchange exchange) {
+        return BindingBuilder.bind(queueFan()).to(fanoutExchange());
+    }
+
+    @Bean
+    public Binding binding(Queue queue, FanoutExchange exchange) {
+        return BindingBuilder.bind(queue()).to(fanoutExchange());
+    }
+
     @Bean
     public MessageConverter jsonMessageConverter() {
         return new Jackson2JsonMessageConverter();
@@ -116,16 +149,16 @@ public class AmqpConfig {
      *
      * @return
      */
-//    @Bean(name="rabbitListenerContainer")
-//    public SimpleRabbitListenerContainerFactory rabbitListenerContainerFactory() {
-//        SimpleRabbitListenerContainerFactory factory = new SimpleRabbitListenerContainerFactory();
-//        factory.setMessageConverter(jsonMessageConverter());
-//        factory.setConnectionFactory(connectionFactory());
-//        factory.setAcknowledgeMode(AcknowledgeMode.MANUAL);//设置消费者手动应答
-//        factory.setPrefetchCount(1);//从代理接收消息的数目。这个值越大，发送消息就越快，但是导致非顺序处理的风险就越高
-//
-//        return factory;
-//    }
+    @Bean(name="rabbitListenerContainer")
+    public SimpleRabbitListenerContainerFactory rabbitListenerContainerFactory() {
+        SimpleRabbitListenerContainerFactory factory = new SimpleRabbitListenerContainerFactory();
+        factory.setMessageConverter(jsonMessageConverter());
+        factory.setConnectionFactory(connectionFactory());
+        factory.setAcknowledgeMode(AcknowledgeMode.MANUAL);//设置消费者手动应答
+        factory.setPrefetchCount(1);//从代理接收消息的数目。这个值越大，发送消息就越快，但是导致非顺序处理的风险就越高
+
+        return factory;
+    }
 
     @Bean
     Receiver receiver(){
@@ -141,7 +174,7 @@ public class AmqpConfig {
     public SimpleMessageListenerContainer messageListenerContainer(MessageListenerAdapter listenerAdapter) {
         SimpleMessageListenerContainer container = new SimpleMessageListenerContainer();
         container.setConnectionFactory(connectionFactory());
-        container.setQueueNames(AmqpConfig.QUEUE_NAME_FAIL);
+        container.setQueueNames(AmqpConfig.QUEUE_NAME,AmqpConfig.QUEUE_NAME_FAN);
         container.setExposeListenerChannel(true);
         container.setMaxConcurrentConsumers(1);
         container.setConcurrentConsumers(1);
